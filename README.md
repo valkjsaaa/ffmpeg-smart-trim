@@ -15,5 +15,5 @@ pip3 install ffmpeg_smart_trim
 ### Usage
 
 ```bash
-python3 -m ffmpeg_smart_trim.trim in.mp4 --start_time 12.345 --end_time 67.890 -output out.mp4
+python3 -m ffmpeg_smart_trim.trim in.mp4 --start_time 12.345 --end_time 67.890 --output out.mp4
 ```
