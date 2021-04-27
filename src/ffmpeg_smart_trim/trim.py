@@ -14,6 +14,7 @@ class TrimVideo:
         self.acodec = ffmpeg.probe(video_path, select_streams="a:0")['streams'][0]['codec_name']
         self.key_frame_timestamps = [Decimal(frame['pkt_pts_time']) for frame in probe['frames']]
         self.duration = Decimal(probe['streams'][0]['duration'])
+        self.video_path = video_path
         if time_range is None:
             self.input_file: ffmpeg.nodes.FilterableStream = ffmpeg.input(video_path)
             self.time_range = (Decimal(0), self.duration)
@@ -60,7 +61,8 @@ class TrimVideo:
 
         def trim(start, end, path: str, copy: bool):
             if copy:
-                return ffmpeg.output(self.input_file, path, c='copy', ss=start, to=end)
+                new_input = ffmpeg.input(self.video_path, ss=start, to=end)
+                return ffmpeg.output(new_input, path, c='copy')
             else:
                 return ffmpeg.output(self.input_file, path, acodec=self.acodec, vcodec=self.vcodec, ss=start, to=end)
 
@@ -104,7 +106,7 @@ class TrimVideo:
         if merge_file_path is None:
             merge_file_path = self.generate_merge_file(paths, prefix)
         merge_input = ffmpeg.input(merge_file_path, f='concat', safe=0)
-        return ffmpeg.output(merge_input, output_path, c='copy', avoid_negative_ts=1)
+        return ffmpeg.output(merge_input, output_path, c='copy')
 
     def clean_temp(self):
         shutil.rmtree(self.temp_dir)
@@ -125,15 +127,16 @@ if __name__ == '__main__':
     print("Parsing video file...")
     video = TrimVideo(args.video, time_range=(input_start_time, input_end_time))
     trim_files, fast_trims_cmd, slow_trims_cmd = video.generate_trim(input_start_time, input_end_time)
-    print("trimting video file...")
+    print("trimming video file...")
     if len(fast_trims_cmd) > 0:
-        ffmpeg.merge_outputs(*fast_trims_cmd).run(overwrite_output=True)
-        # print(ffmpeg.merge_outputs(*fast_trims_cmd).compile())
+        for fast_trim_cmd in fast_trims_cmd:
+            print(fast_trim_cmd.compile())
+            fast_trim_cmd.run(overwrite_output=True)
     if len(slow_trims_cmd) > 0:
+        print(ffmpeg.merge_outputs(*slow_trims_cmd).compile())
         ffmpeg.merge_outputs(*slow_trims_cmd).run(overwrite_output=True)
-        # print(ffmpeg.merge_outputs(*slow_trims_cmd).compile())
     merge_cmd = video.generate_merge(trim_files, args.output)
-    # print(merge_cmd.compile())
+    print(merge_cmd.compile())
     print("Merging video file...")
     merge_cmd.run(overwrite_output=True)
     video.clean_temp()
