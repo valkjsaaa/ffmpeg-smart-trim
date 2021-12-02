@@ -9,7 +9,7 @@ import ffmpeg
 
 class TrimVideo:
     def __init__(self, video_path, temp_dir=None, time_range: (Decimal, Decimal) = None):
-        probe = ffmpeg.probe(video_path, skip_frame="nokey", show_entries="frame=pkt_pts_time", select_streams="v:0")
+        probe = ffmpeg.probe(video_path, skip_frame="nokey", show_entries="frame=pts_time", select_streams="v:0")
         self.vcodec = ffmpeg.probe(video_path, select_streams="v:0")['streams'][0]['codec_name']
         self.acodec = ffmpeg.probe(video_path, select_streams="a:0")['streams'][0]['codec_name']
         self.key_frame_timestamps = [Decimal(frame['pkt_pts_time']) for frame in probe['frames']]
